@@ -345,7 +345,7 @@ def ml_predictions_dashboard(user_data, user_role):
         })
         fig_conv = px.line(forecast_df, x='Date', y='Predicted_Conversion_Rate',
                           title=f"Predicted Conversion Rate - Next {forecast_days} Days")
-        fig_conv.update_yaxis(title="Conversion Rate (%)")
+        fig_conv.update_layout(yaxis_title="Conversion Rate (%)")  # ✅ FIXED
         st.plotly_chart(fig_conv, use_container_width=True)
     
     with col2:
@@ -356,7 +356,7 @@ def ml_predictions_dashboard(user_data, user_role):
         })
         fig_success = px.line(success_df, x='Date', y='Predicted_Success_Rate',
                              title=f"Predicted Call Success Rate - Next {forecast_days} Days")
-        fig_success.update_yaxis(title="Success Rate (%)")
+        fig_success.update_layout(yaxis_title="Success Rate (%)")  # ✅ FIXED
         st.plotly_chart(fig_success, use_container_width=True)
     
     # Feature importance (mock)
@@ -370,7 +370,7 @@ def ml_predictions_dashboard(user_data, user_role):
         y=importance,
         title="Feature Importance in Conversion Prediction Model"
     )
-    fig_importance.update_yaxis(title="Importance Score")
+    fig_importance.update_layout(yaxis_title="Importance Score")  # ✅ FIXED
     st.plotly_chart(fig_importance, use_container_width=True)
     
     # Model performance metrics
@@ -384,3 +384,4 @@ def ml_predictions_dashboard(user_data, user_role):
         st.metric("Recall", "89.5%")
     with col4:
         st.metric("F1-Score", "85.6%")
+
