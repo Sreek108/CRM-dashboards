@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore')
 
 # Configure page
 st.set_page_config(
-    page_title="Quara Finance - CRM Dashboard",
+    page_title="NSP-CRM Dashboard",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -19,9 +19,7 @@ st.set_page_config(
 from data_loader import load_all_data, get_user_specific_data
 from auth import initialize_session_state, role_selector, get_user_role
 from dashboards import (
-    lead_status_dashboard, ai_call_activity_dashboard, 
-    followup_task_dashboard, agent_availability_dashboard,
-    conversion_dashboard, geographic_dashboard, ml_predictions_dashboard
+    agent_dashboard, team_lead_dashboard, manager_dashboard
 )
 
 def main():
@@ -40,47 +38,22 @@ def main():
     # Main dashboard header
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        st.title("📊 Quara Finance CRM Dashboard")
+        st.title("📊 NSP-CRM Dashboard")
     with col2:
         st.metric("Current Role", current_role)
     with col3:
-        st.metric("Data Scope", 
-                 "Personal" if current_role == "Agent" else "Organization")
+        data_scope = "Personal" if current_role == "Agent" else "Company-wide"
+        st.metric("Data Scope", data_scope)
     
-    # Dashboard navigation tabs
-    dashboard_tabs = st.tabs([
-        "📋 Lead Status",
-        "📞 Call Activity", 
-        "📅 Tasks & Follow-up",
-        "🕐 Availability",
-        "💰 Conversion",
-        "🌍 Geographic",
-        "🤖 ML Predictions"
-    ])
+    # Role-specific dashboard rendering
+    if current_role == "Agent":
+        agent_dashboard(user_data, current_role)
+    elif current_role == "Team Lead":
+        team_lead_dashboard(user_data, current_role)
+    else:  # Manager and Higher Management
+        manager_dashboard(user_data, current_role)
     
-    # Render dashboards in tabs
-    with dashboard_tabs[0]:
-        lead_status_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[1]:
-        ai_call_activity_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[2]:
-        followup_task_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[3]:
-        agent_availability_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[4]:
-        conversion_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[5]:
-        geographic_dashboard(user_data, current_role)
-    
-    with dashboard_tabs[6]:
-        ml_predictions_dashboard(user_data, current_role)
-    
-    # Footer with role switch help
+    # Footer with role information
     st.markdown("---")
     st.markdown(
         """
