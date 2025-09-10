@@ -166,39 +166,17 @@ def agent_availability_dashboard(user_data, user_role):
     else:
         st.subheader("Team Availability Heatmap")
     
-    # Pivot data for heatmap
-    pivot_data = availability_df.pivot_table(
-        index='Agent', 
-        columns=['Date', 'Hour'], 
-        values='Status', 
-        aggfunc='first'
-    )
-    
-    # Convert status to numeric for visualization
-    status_mapping = {'Available': 1, 'Busy': 0.5, 'Break': 0}
-    pivot_numeric = pivot_data.replace(status_mapping)
-    
-    if user_role != "Agent":
-        # Show all agents for managers
-        fig = px.imshow(
-            pivot_numeric.values,
-            labels=dict(x="Time Slots", y="Agents", color="Availability"),
-            x=[f"{date} {hour}:00" for date, hour in pivot_numeric.columns],
-            y=pivot_numeric.index,
-            color_continuous_scale="RdYlGn",
-            title="Team Availability Heatmap"
-        )
-        fig.update_xaxes(tickangle=45)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Availability statistics
+    # Simple availability statistics instead of complex heatmap
     st.subheader("Availability Statistics")
     avail_stats = availability_df.groupby('Agent')['Status'].value_counts().unstack(fill_value=0)
-    avail_stats['Total_Hours'] = avail_stats.sum(axis=1)
-    if 'Busy' in avail_stats.columns:
-        avail_stats['Utilization_Rate'] = avail_stats['Busy'] / avail_stats['Total_Hours'] * 100
     
-    st.dataframe(avail_stats)
+    if not avail_stats.empty:
+        avail_stats['Total_Hours'] = avail_stats.sum(axis=1)
+        if 'Busy' in avail_stats.columns:
+            avail_stats['Utilization_Rate'] = (avail_stats['Busy'] / avail_stats['Total_Hours'] * 100).round(1)
+        st.dataframe(avail_stats)
+    else:
+        st.info("No availability data available.")
 
 def conversion_dashboard(user_data, user_role):
     st.title("💰 Conversion Dashboard")
@@ -245,24 +223,34 @@ def conversion_dashboard(user_data, user_role):
         )
         st.plotly_chart(fig_revenue, use_container_width=True)
     
-    # Monthly conversion trend - FIX: Convert Period to string
-    leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M').astype(str)
-    monthly_conversions = leads_df.groupby('Month').agg({
-        'LeadId': 'count',
-        'LeadStatus': lambda x: (x == 'Won').sum()
-    }).reset_index()
-    monthly_conversions.columns = ['Month', 'Total_Leads', 'Won_Leads']
-    monthly_conversions['Conversion_Rate'] = monthly_conversions['Won_Leads'] / monthly_conversions['Total_Leads'] * 100
-    
-    st.subheader("Monthly Conversion Trend")
-    fig_trend = px.line(monthly_conversions, x='Month', y='Conversion_Rate',
-                       title="Monthly Conversion Rate Trend")
-    st.plotly_chart(fig_trend, use_container_width=True)
+    # Monthly conversion trend - FIXED: Convert Period to string
+    if not leads_df.empty:
+        leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M').astype(str)
+        monthly_conversions = leads_df.groupby('Month').agg({
+            'LeadId': 'count',
+            'LeadStatus': lambda x: (x == 'Won').sum()
+        }).reset_index()
+        monthly_conversions.columns = ['Month', 'Total_Leads', 'Won_Leads']
+        monthly_conversions['Conversion_Rate'] = (monthly_conversions['Won_Leads'] / monthly_conversions['Total_Leads'] * 100).round(1)
+        
+        st.subheader("Monthly Conversion Trend")
+        if not monthly_conversions.empty:
+            fig_trend = px.line(monthly_conversions, x='Month', y='Conversion_Rate',
+                               title="Monthly Conversion Rate Trend")
+            st.plotly_chart(fig_trend, use_container_width=True)
+        else:
+            st.info("No conversion data available for trending.")
+    else:
+        st.info("No leads data available.")
 
 def geographic_dashboard(user_data, user_role):
     st.title("🌍 Geographic Dashboard")
     
     leads_df = user_data['leads']
+    
+    if leads_df.empty:
+        st.info("No geographic data available.")
+        return
     
     # Country-wise metrics
     country_stats = leads_df.groupby('Country').agg({
@@ -271,7 +259,7 @@ def geographic_dashboard(user_data, user_role):
         'RevenuePotential': 'sum'
     }).reset_index()
     country_stats.columns = ['Country', 'Total_Leads', 'Won_Leads', 'Revenue_Potential']
-    country_stats['Conversion_Rate'] = country_stats['Won_Leads'] / country_stats['Total_Leads'] * 100
+    country_stats['Conversion_Rate'] = (country_stats['Won_Leads'] / country_stats['Total_Leads'] * 100).round(1)
     
     col1, col2 = st.columns(2)
     
@@ -345,7 +333,11 @@ def ml_predictions_dashboard(user_data, user_role):
         })
         fig_conv = px.line(forecast_df, x='Date', y='Predicted_Conversion_Rate',
                           title=f"Predicted Conversion Rate - Next {forecast_days} Days")
-        fig_conv.update_layout(yaxis_title="Conversion Rate (%)")  # ✅ FIXED
+        # FIXED: Use update_layout instead of update_yaxis
+        fig_conv.update_layout(
+            yaxis_title="Conversion Rate (%)",
+            xaxis_title="Date"
+        )
         st.plotly_chart(fig_conv, use_container_width=True)
     
     with col2:
@@ -356,7 +348,11 @@ def ml_predictions_dashboard(user_data, user_role):
         })
         fig_success = px.line(success_df, x='Date', y='Predicted_Success_Rate',
                              title=f"Predicted Call Success Rate - Next {forecast_days} Days")
-        fig_success.update_layout(yaxis_title="Success Rate (%)")  # ✅ FIXED
+        # FIXED: Use update_layout instead of update_yaxis
+        fig_success.update_layout(
+            yaxis_title="Success Rate (%)",
+            xaxis_title="Date"
+        )
         st.plotly_chart(fig_success, use_container_width=True)
     
     # Feature importance (mock)
@@ -370,7 +366,11 @@ def ml_predictions_dashboard(user_data, user_role):
         y=importance,
         title="Feature Importance in Conversion Prediction Model"
     )
-    fig_importance.update_layout(yaxis_title="Importance Score")  # ✅ FIXED
+    # FIXED: Use update_layout instead of update_yaxis
+    fig_importance.update_layout(
+        yaxis_title="Importance Score",
+        xaxis_title="Features"
+    )
     st.plotly_chart(fig_importance, use_container_width=True)
     
     # Model performance metrics
@@ -384,4 +384,3 @@ def ml_predictions_dashboard(user_data, user_role):
         st.metric("Recall", "89.5%")
     with col4:
         st.metric("F1-Score", "85.6%")
-
