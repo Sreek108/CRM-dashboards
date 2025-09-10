@@ -247,17 +247,27 @@ def conversion_dashboard(user_data, user_role):
         st.plotly_chart(fig_revenue, use_container_width=True)
     
     # Monthly conversion trend
-    leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M')
-    monthly_conversions = leads_df.groupby('Month').agg({
-        'LeadId': 'count',
-        'LeadStatus': lambda x: (x == 'Won').sum()
-    }).reset_index()
-    monthly_conversions.columns = ['Month', 'Total_Leads', 'Won_Leads']
-    monthly_conversions['Conversion_Rate'] = monthly_conversions['Won_Leads'] / monthly_conversions['Total_Leads'] * 100
-    
+     leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M').astype(str)
+    # Now Month column is plain strings like “2025-08”
+
+    monthly_conversions = (
+        leads_df.groupby('Month')
+                .agg(Total_Leads=('LeadId', 'count'),
+                     Won_Leads=('LeadStatus', lambda x: (x == 'Won').sum()))
+                .reset_index()
+    )
+    monthly_conversions['Conversion_Rate'] = (
+        monthly_conversions['Won_Leads'] /
+        monthly_conversions['Total_Leads'] * 100
+    )
+
     st.subheader("Monthly Conversion Trend")
-    fig_trend = px.line(monthly_conversions, x='Month', y='Conversion_Rate',
-                       title="Monthly Conversion Rate Trend")
+    fig_trend = px.line(
+        monthly_conversions,
+        x='Month',
+        y='Conversion_Rate',
+        title="Monthly Conversion Rate Trend"
+    )
     st.plotly_chart(fig_trend, use_container_width=True)
 
 def geographic_dashboard(user_data, user_role):
