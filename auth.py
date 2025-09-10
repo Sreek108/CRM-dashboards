@@ -18,8 +18,8 @@ def authenticate_user():
     
     with col2:
         st.markdown("#### Please enter your credentials")
-        username = st.text_input("NSP")
-        password = st.text_input("1234", type="password")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
         
         if st.button("Login", use_container_width=True):
             if username in USER_DATABASE and USER_DATABASE[username]["password"] == password:
