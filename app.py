@@ -17,7 +17,7 @@ st.set_page_config(
 
 # Import custom modules
 from data_loader import load_all_data, get_user_specific_data
-from auth import initialize_session_state, role_selector, get_user_role, can_view_all_agents
+from auth import initialize_session_state, role_selector, get_user_role, can_view_all_agents, get_selected_agent
 from dashboards import (
     agent_dashboard, team_lead_dashboard, manager_dashboard,
     admin_dashboard, lead_import_dashboard, ai_operations_dashboard,
