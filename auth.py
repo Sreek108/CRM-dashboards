@@ -1,13 +1,30 @@
 import streamlit as st
 
+# Define all user roles and agents
+USER_ROLES = {
+    "Agent 1": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 1"},
+    "Agent 2": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 2"},
+    "Agent 3": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 3"},
+    "Agent 4": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 4"},
+    "Agent 5": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 5"},
+    "Agent 6": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 6"},
+    "Agent 7": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 7"},
+    "Agent 8": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 8"},
+    "Agent 9": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 9"},
+    "Agent 10": {"role": "Agent", "desc": "Individual performance tracking", "agent_name": "Agent 10"},
+    "Team Lead": {"role": "Team Lead", "desc": "Team oversight and management", "agent_name": None},
+    "Manager": {"role": "Manager", "desc": "Department-wide analytics", "agent_name": None},
+    "Higher Management": {"role": "Higher Management", "desc": "Company-wide insights", "agent_name": None}
+}
+
 def initialize_session_state():
     """Initialize session state variables"""
     if 'user_role' not in st.session_state:
-        st.session_state.user_role = "Agent"
-    if 'selected_agent_id' not in st.session_state:
-        st.session_state.selected_agent_id = 1
-    if 'viewing_agent' not in st.session_state:
-        st.session_state.viewing_agent = "Agent 1"
+        st.session_state.user_role = "Agent 1"
+    if 'current_user' not in st.session_state:
+        st.session_state.current_user = "Agent 1"
+    if 'selected_agent_for_viewing' not in st.session_state:
+        st.session_state.selected_agent_for_viewing = "Agent 1"
 
 def role_selector():
     """Display separate role and agent selectors in sidebar"""
@@ -16,34 +33,30 @@ def role_selector():
     st.sidebar.markdown("**AI-Powered CRM System**")
     st.sidebar.markdown("---")
     
-    # SEPARATE ROLE SELECTOR
-    st.sidebar.markdown("### 👤 User Role")
-    role_options = ["Agent", "Team Lead", "Manager", "Higher Management"]
-    selected_role = st.sidebar.selectbox(
-        "Select your role:",
+    # ROLE SELECTOR
+    st.sidebar.markdown("### 👤 Select User Role")
+    role_options = list(USER_ROLES.keys())
+    selected_role_key = st.sidebar.selectbox(
+        "Choose your role:",
         role_options,
-        help="Choose your organizational level"
+        help="Select your organizational level"
     )
     
-    st.session_state.user_role = selected_role
+    # Update session state
+    role_info = USER_ROLES[selected_role_key]
+    st.session_state.user_role = role_info["role"]
+    st.session_state.current_user = selected_role_key
     
     # Show role description
-    role_descriptions = {
-        "Agent": "Personal performance tracking only",
-        "Team Lead": "Team oversight and management", 
-        "Manager": "Department-wide analytics",
-        "Higher Management": "Company-wide insights & full system control"
-    }
-    
-    st.sidebar.info(f"**Access Level:** {role_descriptions[selected_role]}")
-    
+    st.sidebar.info(f"**Access:** {role_info['desc']}")
     st.sidebar.markdown("---")
     
-    # SEPARATE AGENT SELECTOR (only for Team Lead+)
-    if selected_role in ["Team Lead", "Manager", "Higher Management"]:
-        st.sidebar.markdown("### 🔍 Agent Selection")
+    # AGENT SELECTOR (only for Team Lead and above)
+    if role_info["role"] in ["Team Lead", "Manager", "Higher Management"]:
+        st.sidebar.markdown("### 🔍 Select Agent to View")
         
-        agent_options = ["All Agents"] + [f"Agent {i}" for i in range(1, 11)]
+        # Get all agent options
+        agent_options = ["All Agents"] + [key for key in USER_ROLES.keys() if USER_ROLES[key]["role"] == "Agent"]
         
         selected_agent = st.sidebar.selectbox(
             "View data for:",
@@ -51,65 +64,53 @@ def role_selector():
             help="Select specific agent or view all agents"
         )
         
-        st.session_state.viewing_agent = selected_agent
+        st.session_state.selected_agent_for_viewing = selected_agent
         
-        # Visual indicator of current selection
+        # Visual indicator
         if selected_agent == "All Agents":
-            st.sidebar.success("👥 **Viewing:** Company-wide data")
+            st.sidebar.success("👥 **Viewing:** All agents data")
         else:
-            st.sidebar.warning(f"👤 **Viewing:** {selected_agent}'s data only")
+            st.sidebar.warning(f"👤 **Viewing:** {selected_agent}'s data")
     
     else:
         # AGENT ROLE - Restricted to own data
-        st.sidebar.markdown("### 🔒 Data Access")
-        agent_id = st.session_state.get('selected_agent_id', 1)
-        assigned_agent = f"Agent {agent_id}"
-        
-        st.session_state.viewing_agent = assigned_agent
-        
-        st.sidebar.error(f"🔒 **Restricted to:** {assigned_agent} (Your data only)")
-        st.sidebar.markdown("*Cannot view other agents' data*")
+        st.session_state.selected_agent_for_viewing = selected_role_key
+        st.sidebar.error(f"🔒 **Restricted:** {selected_role_key} data only")
     
     st.sidebar.markdown("---")
     
-    # ACCESS LEVEL SUMMARY
-    st.sidebar.markdown("### 📊 Current Access Level")
+    # ACCESS LEVEL DISPLAY
+    st.sidebar.markdown("### 📊 Access Level")
     
-    access_info = {
-        "Agent": {
-            "icon": "🔴",
-            "level": "Restricted Access",
-            "permissions": ["✅ Personal performance", "✅ Own tasks & calls", "❌ Other agents' data", "❌ System administration"]
-        },
-        "Team Lead": {
-            "icon": "🟡", 
-            "level": "Team Access",
-            "permissions": ["✅ All team agents", "✅ Performance comparison", "✅ Task management", "❌ System configuration"]
-        },
-        "Manager": {
-            "icon": "🟠",
-            "level": "Department Access", 
-            "permissions": ["✅ Full analytics suite", "✅ All agent selection", "✅ Advanced reporting", "✅ Limited admin access"]
-        },
-        "Higher Management": {
-            "icon": "🟢",
-            "level": "Full System Access",
-            "permissions": ["✅ Complete system control", "✅ All dashboards", "✅ System administration", "✅ Advanced AI operations"]
-        }
-    }
+    if role_info["role"] == "Agent":
+        st.sidebar.markdown("🔴 **Restricted Access**")
+        st.sidebar.markdown("- ✅ Personal performance")
+        st.sidebar.markdown("- ❌ Other agents' data")
+    elif role_info["role"] == "Team Lead":
+        st.sidebar.markdown("🟡 **Team Access**")
+        st.sidebar.markdown("- ✅ All team agents")
+        st.sidebar.markdown("- ✅ Performance comparison")
+    elif role_info["role"] == "Manager":
+        st.sidebar.markdown("🟠 **Department Access**")
+        st.sidebar.markdown("- ✅ Full analytics suite")
+        st.sidebar.markdown("- ✅ All agent selection")
+    else:  # Higher Management
+        st.sidebar.markdown("🟢 **Full System Access**")
+        st.sidebar.markdown("- ✅ Complete system control")
+        st.sidebar.markdown("- ✅ All dashboards")
     
-    info = access_info[selected_role]
-    st.sidebar.markdown(f"{info['icon']} **{info['level']}**")
-    
-    for permission in info['permissions']:
-        st.sidebar.markdown(f"  {permission}")
-    
-    return selected_role
+    return role_info["role"]
 
 def get_user_role():
     """Get current user role"""
-    return st.session_state.user_role
+    return st.session_state.get('user_role', 'Agent 1')
 
-def get_viewing_agent():
+def can_view_all_agents(user_role=None):
+    """Check if user role can view all agents"""
+    if user_role is None:
+        user_role = st.session_state.get('user_role', 'Agent 1')
+    return user_role in ["Team Lead", "Manager", "Higher Management"]
+
+def get_selected_agent():
     """Get currently selected agent for viewing"""
-    return st.session_state.viewing_agent
+    return st.session_state.get('selected_agent_for_viewing', 'Agent 1')
