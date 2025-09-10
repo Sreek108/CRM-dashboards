@@ -4,8 +4,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 def lead_status_dashboard(user_data, user_role):
     st.title("📊 Lead Status Dashboard")
@@ -197,14 +195,15 @@ def agent_availability_dashboard(user_data, user_role):
     st.subheader("Availability Statistics")
     avail_stats = availability_df.groupby('Agent')['Status'].value_counts().unstack(fill_value=0)
     avail_stats['Total_Hours'] = avail_stats.sum(axis=1)
-    avail_stats['Utilization_Rate'] = avail_stats['Busy'] / avail_stats['Total_Hours'] * 100
+    if 'Busy' in avail_stats.columns:
+        avail_stats['Utilization_Rate'] = avail_stats['Busy'] / avail_stats['Total_Hours'] * 100
     
     st.dataframe(avail_stats)
 
 def conversion_dashboard(user_data, user_role):
     st.title("💰 Conversion Dashboard")
     
-    leads_df = user_data['leads']
+    leads_df = user_data['leads'].copy()
     
     # Conversion metrics
     col1, col2, col3, col4 = st.columns(4)
@@ -246,28 +245,18 @@ def conversion_dashboard(user_data, user_role):
         )
         st.plotly_chart(fig_revenue, use_container_width=True)
     
-    # Monthly conversion trend
-     leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M').astype(str)
-    # Now Month column is plain strings like “2025-08”
-
-    monthly_conversions = (
-        leads_df.groupby('Month')
-                .agg(Total_Leads=('LeadId', 'count'),
-                     Won_Leads=('LeadStatus', lambda x: (x == 'Won').sum()))
-                .reset_index()
-    )
-    monthly_conversions['Conversion_Rate'] = (
-        monthly_conversions['Won_Leads'] /
-        monthly_conversions['Total_Leads'] * 100
-    )
-
+    # Monthly conversion trend - FIX: Convert Period to string
+    leads_df['Month'] = leads_df['CreatedDate'].dt.to_period('M').astype(str)
+    monthly_conversions = leads_df.groupby('Month').agg({
+        'LeadId': 'count',
+        'LeadStatus': lambda x: (x == 'Won').sum()
+    }).reset_index()
+    monthly_conversions.columns = ['Month', 'Total_Leads', 'Won_Leads']
+    monthly_conversions['Conversion_Rate'] = monthly_conversions['Won_Leads'] / monthly_conversions['Total_Leads'] * 100
+    
     st.subheader("Monthly Conversion Trend")
-    fig_trend = px.line(
-        monthly_conversions,
-        x='Month',
-        y='Conversion_Rate',
-        title="Monthly Conversion Rate Trend"
-    )
+    fig_trend = px.line(monthly_conversions, x='Month', y='Conversion_Rate',
+                       title="Monthly Conversion Rate Trend")
     st.plotly_chart(fig_trend, use_container_width=True)
 
 def geographic_dashboard(user_data, user_role):
