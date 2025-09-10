@@ -94,11 +94,11 @@ def get_user_specific_data(username, role):
     leads_df, calls_df, tasks_df, availability_df = load_all_data()
     
     # Get selected agent for viewing
-    selected_agent = st.session_state.get('selected_agent_for_viewing', 'Agent 1')
+    selected_agent = st.session_state.get('selected_agent', 'Agent 1')
     
     if role == "Agent":
         # STRICT RESTRICTION: Agents can ONLY see their own data
-        agent_name = st.session_state.current_user  # This will be "Agent X"
+        agent_name = selected_agent  # This will be their fixed agent
         
         filtered_data = {
             'leads': leads_df[leads_df['AssignedTo'] == agent_name],
@@ -111,16 +111,12 @@ def get_user_specific_data(username, role):
             'can_select_agent': False
         }
         
-        # Double-check security: Ensure no data leakage
-        assert filtered_data['leads']['AssignedTo'].nunique() <= 1, "Data leak detected: Agent seeing other agents' leads"
-        assert filtered_data['calls']['AssignedTo'].nunique() <= 1, "Data leak detected: Agent seeing other agents' calls"
-        
         return filtered_data
         
-    elif role == "Team Lead":
-        # Team Lead can see all agents but can select specific ones
+    elif role in ["Team Lead", "Manager", "Higher Management"]:
+        # Higher roles can select agents
         if selected_agent == "All Agents":
-            # Show all agents for team lead
+            # Show all agents
             return {
                 'leads': leads_df,
                 'calls': calls_df,
@@ -143,56 +139,7 @@ def get_user_specific_data(username, role):
                 'viewing_agent': selected_agent,
                 'can_select_agent': True
             }
-            
-    elif role == "Manager":
-        # Manager has same capabilities as Team Lead but with broader context
-        if selected_agent == "All Agents":
-            return {
-                'leads': leads_df,
-                'calls': calls_df,
-                'tasks': tasks_df,
-                'availability': availability_df,
-                'scope': 'company_wide',
-                'description': 'Complete department data',
-                'viewing_agent': 'All Agents',
-                'can_select_agent': True
-            }
-        else:
-            return {
-                'leads': leads_df[leads_df['AssignedTo'] == selected_agent],
-                'calls': calls_df[calls_df['AssignedTo'] == selected_agent],
-                'tasks': tasks_df[tasks_df['AssignedTo'] == selected_agent],
-                'availability': availability_df[availability_df['Agent'] == selected_agent],
-                'scope': 'selected_agent',
-                'description': f'Detailed analysis for {selected_agent}',
-                'viewing_agent': selected_agent,
-                'can_select_agent': True
-            }
-            
-    else:  # Higher Management
-        # Full access with agent selection capability
-        if selected_agent == "All Agents":
-            return {
-                'leads': leads_df,
-                'calls': calls_df,
-                'tasks': tasks_df, 
-                'availability': availability_df,
-                'scope': 'executive',
-                'description': 'Complete organizational data (all agents)',
-                'viewing_agent': 'All Agents',
-                'can_select_agent': True
-            }
-        else:
-            return {
-                'leads': leads_df[leads_df['AssignedTo'] == selected_agent],
-                'calls': calls_df[calls_df['AssignedTo'] == selected_agent],
-                'tasks': tasks_df[tasks_df['AssignedTo'] == selected_agent],
-                'availability': availability_df[availability_df['Agent'] == selected_agent],
-                'scope': 'selected_agent',
-                'description': f'Executive view of {selected_agent} performance',
-                'viewing_agent': selected_agent,
-                'can_select_agent': True
-            }
+
 
 def get_agent_performance_summary():
     """Get summary of all agents for comparison (only for Team Lead+)"""
