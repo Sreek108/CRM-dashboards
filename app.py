@@ -28,35 +28,38 @@ def main():
     # Initialize session state
     initialize_session_state()
     
-    # Role selector in sidebar
+    # Role selector in sidebar (now with two separate selectors)
     current_role = role_selector()
     
-    # Load data based on user role and selected agent
+    # Load data based on selections
     user_data = get_user_specific_data(
-        st.session_state.current_user, 
+        st.session_state.get('selected_agent', 'Agent 1'), 
         current_role
     )
     
-    # Enhanced main dashboard header with agent info
+    # Enhanced main dashboard header
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     with col1:
         st.title("🤖 NSP-CRM Dashboard")
         st.caption("AI-Powered Customer Relationship Management")
     with col2:
-        st.metric("Current Role", current_role)
+        st.metric("User Level", current_role)
     with col3:
-        viewing_agent = user_data.get('viewing_agent', 'Unknown')
+        viewing_agent = get_selected_agent()
         st.metric("Viewing Data", viewing_agent)
     with col4:
-        # System status indicator
-        st.metric("AI System", "🟢 Online", delta="Active")
+        restriction_status = "🔒 Restricted" if is_agent_restricted() else "🔓 Full Access"
+        st.metric("Access Level", restriction_status)
     
-    # Show data restriction notice for agents
+    # Show data access notification
     if current_role == "Agent":
-        st.info(f"🔒 **Data Restriction Active**: You can only view your personal performance data. Other agents' data is not accessible.")
-    elif user_data.get('viewing_agent') != 'All Agents':
-        st.info(f"👁️ **Viewing Specific Agent**: Currently displaying data for {user_data.get('viewing_agent')}. Use the sidebar to switch agents or view all agents.")
+        st.error(f"🔒 **Data Restriction Active**: You can only view your personal performance data ({get_selected_agent()}). Other agents' data is not accessible.")
+    elif get_selected_agent() != 'All Agents':
+        st.info(f"👁️ **Specific Agent View**: Currently displaying data for {get_selected_agent()}. Use the sidebar to switch agents or view all agents.")
+    else:
+        st.success(f"👥 **All Agents View**: Displaying company-wide data across all agents.")
     
+    # Rest of your dashboard code...
     # Role-specific dashboard rendering
     if current_role == "Agent":
         agent_dashboard(user_data, current_role)
@@ -64,8 +67,9 @@ def main():
         team_lead_dashboard(user_data, current_role)
     elif current_role == "Manager":
         manager_dashboard(user_data, current_role)
-    else:  # Higher Management - Full system access
+    else:  # Higher Management
         higher_management_dashboard(user_data, current_role)
+
     
     # Footer with system and security information
     st.markdown("---")
