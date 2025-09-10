@@ -35,7 +35,7 @@ def initialize_session_state():
 
 def role_selector():
     """Display role selector in sidebar"""
-    st.sidebar.title("🏢 Quara Finance")
+    st.sidebar.title("🏢 NSP")
     st.sidebar.markdown("**CRM Dashboard**")
     st.sidebar.markdown("---")
     
