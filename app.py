@@ -16,7 +16,7 @@ st.set_page_config(
 )
 
 # Import custom modules
-from data_loader import load_all_data, get_user_specific_data, get_agent_performance_summary
+from data_loader import load_all_data, get_user_specific_data
 from auth import initialize_session_state, role_selector, get_user_role, can_view_all_agents
 from dashboards import (
     agent_dashboard, team_lead_dashboard, manager_dashboard,
@@ -88,25 +88,46 @@ def higher_management_dashboard(user_data, user_role):
     if user_data.get('viewing_agent') == 'All Agents':
         st.subheader("📊 All Agents Performance Overview")
         
-        agent_summary = get_agent_performance_summary()
-        if agent_summary is not None:
+        # Simple agent performance overview using existing data
+        leads_df = user_data['leads']
+        calls_df = user_data['calls']
+        
+        if not leads_df.empty:
             col1, col2 = st.columns(2)
             
             with col1:
-                fig_conversion = px.bar(agent_summary, x='Agent', y='Conversion_Rate',
+                # Agent conversion rates
+                agent_conversion = leads_df.groupby('AssignedTo').agg({
+                    'LeadId': 'count',
+                    'LeadStatus': lambda x: (x == 'Won').sum()
+                }).reset_index()
+                agent_conversion.columns = ['Agent', 'Total_Leads', 'Won_Leads']
+                agent_conversion['Conversion_Rate'] = (agent_conversion['Won_Leads'] / agent_conversion['Total_Leads'] * 100).round(1)
+                
+                fig_conversion = px.bar(agent_conversion, x='Agent', y='Conversion_Rate',
                                       title="Conversion Rate by Agent (%)")
                 st.plotly_chart(fig_conversion, use_container_width=True)
             
             with col2:
-                fig_calls = px.bar(agent_summary, x='Agent', y='Call_Success_Rate',
+                # Agent call success rates
+                agent_calls = calls_df.groupby('AssignedTo').agg({
+                    'LeadCallId': 'count',
+                    'CallStatus': lambda x: (x == 'Completed').sum()
+                }).reset_index()
+                agent_calls.columns = ['Agent', 'Total_Calls', 'Successful_Calls']
+                agent_calls['Success_Rate'] = (agent_calls['Successful_Calls'] / agent_calls['Total_Calls'] * 100).round(1)
+                
+                fig_calls = px.bar(agent_calls, x='Agent', y='Success_Rate',
                                  title="Call Success Rate by Agent (%)")
                 st.plotly_chart(fig_calls, use_container_width=True)
             
-            st.dataframe(agent_summary)
+            # Combine the data for summary table
+            summary_table = agent_conversion.merge(agent_calls, on='Agent', how='outer').fillna(0)
+            st.dataframe(summary_table)
         
         st.markdown("---")
     
-    # Enhanced navigation for full system access
+    # Rest of the function remains the same...
     main_tabs = st.tabs([
         "📊 Analytics Hub",
         "🤖 AI Operations", 
@@ -117,7 +138,7 @@ def higher_management_dashboard(user_data, user_role):
     ])
     
     with main_tabs[0]:
-        manager_dashboard(user_data, user_role)  # Existing analytics
+        manager_dashboard(user_data, user_role)
     
     with main_tabs[1]:
         ai_operations_dashboard(user_data, user_role)
@@ -133,6 +154,3 @@ def higher_management_dashboard(user_data, user_role):
     
     with main_tabs[5]:
         realtime_monitoring_dashboard(user_data, user_role)
-
-if __name__ == "__main__":
-    main()
