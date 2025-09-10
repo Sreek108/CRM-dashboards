@@ -79,22 +79,49 @@ def load_all_data():
     return leads_df, calls_df, tasks_df, availability_df
 
 def get_user_specific_data(username, role):
-    """Filter data based on user role"""
+    """Filter data based on user role with enhanced role descriptions"""
     leads_df, calls_df, tasks_df, availability_df = load_all_data()
     
     if role == "Agent":
+        # Agent sees only their own data
         agent_name = f"Agent {st.session_state.agent_id}"
         return {
             'leads': leads_df[leads_df['AssignedTo'] == agent_name],
             'calls': calls_df[calls_df['AssignedTo'] == agent_name], 
             'tasks': tasks_df[tasks_df['AssignedTo'] == agent_name],
-            'availability': availability_df[availability_df['Agent'] == agent_name]
+            'availability': availability_df[availability_df['Agent'] == agent_name],
+            'scope': 'personal',
+            'description': f'Personal performance data for {agent_name}'
         }
-    else:
-        # Team Lead, Manager, Higher Management get all data
+    elif role == "Team Lead":
+        # Team Lead sees first 3 agents (their team)
+        team_agents = ['Agent 1', 'Agent 2', 'Agent 3']
+        return {
+            'leads': leads_df[leads_df['AssignedTo'].isin(team_agents)],
+            'calls': calls_df[calls_df['AssignedTo'].isin(team_agents)], 
+            'tasks': tasks_df[tasks_df['AssignedTo'].isin(team_agents)],
+            'availability': availability_df[availability_df['Agent'].isin(team_agents)],
+            'scope': 'team',
+            'description': 'Team performance data (3 agents)'
+        }
+    elif role == "Manager":
+        # Manager sees larger subset (department level)
+        dept_agents = [f'Agent {i}' for i in range(1, 8)]  # First 7 agents
+        return {
+            'leads': leads_df[leads_df['AssignedTo'].isin(dept_agents)],
+            'calls': calls_df[calls_df['AssignedTo'].isin(dept_agents)], 
+            'tasks': tasks_df[tasks_df['AssignedTo'].isin(dept_agents)],
+            'availability': availability_df[availability_df['Agent'].isin(dept_agents)],
+            'scope': 'department',
+            'description': 'Department data (7 agents)'
+        }
+    else:  # Higher Management
+        # Higher Management sees all data
         return {
             'leads': leads_df,
             'calls': calls_df,
             'tasks': tasks_df, 
-            'availability': availability_df
+            'availability': availability_df,
+            'scope': 'organization',
+            'description': 'Complete organizational data (all agents)'
         }
