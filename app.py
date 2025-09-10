@@ -154,3 +154,6 @@ def higher_management_dashboard(user_data, user_role):
     
     with main_tabs[5]:
         realtime_monitoring_dashboard(user_data, user_role)
+if __name__ == "__main__":
+    main()
+
